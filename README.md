@@ -54,18 +54,20 @@ A typeless, property-based knowledge graph, every call scoped to the signed-in u
 
 | Area | What |
 |------|------|
-| Databases & views | list / create databases, board·calendar·table views |
+| Databases & views | list / create databases; board, graph, calendar & table views over the same nodes |
 | Nodes | upsert typeless nodes (free-form properties: text/number/date/select/status/url), move/place |
 | Edges | typed relations with provenance & confidence |
 | Recall | search nodes, get context around a node, read the emergent schema |
 | Provenance & audit | sources, review queue, memory-event log |
+| Your own databases | connect your Supabase and query it next to the graph (writes & DDL behind flags you control) |
 
 Tools appear as `mcp__airgraph__*` in your client.
 
 ## See it
 
 Your agent writes to the graph; you watch it draw itself on the web canvas in
-real time.
+real time — as a board, a calendar, or an Obsidian-style network of everything
+you've stored.
 
 <!-- ![demo](docs/demo.gif) -->
 _(demo coming soon)_
