@@ -1,6 +1,6 @@
 <div align="center">
 
-# Airgraph
+# Airgraph Guide
 
 **Persistent memory, shared knowledge graphs, and routed agent skills - over MCP.**
 
@@ -10,7 +10,7 @@ with a live web canvas to watch it grow. Use the hosted MCP endpoint directly,
 then optionally sync Airgraph-backed skills into each agent's local skill folder.
 
 ![MCP](https://img.shields.io/badge/MCP-Streamable_HTTP-5b50e0)
-![Auth](https://img.shields.io/badge/Auth-OAuth_2.1_+_PKCE-2ea44f)
+![Auth](https://img.shields.io/badge/Auth-OAuth_+_Bearer-2ea44f)
 ![Skills](https://img.shields.io/badge/Skills-Airgraph_routed-0f766e)
 
 </div>
@@ -23,6 +23,21 @@ copy a shared API key. Point your client at:
 ```text
 https://whale-app-kfijw.ondigitalocean.app/mcp
 ```
+
+## Choose Your Client
+
+Airgraph uses the client you pick during setup. Do not guess from OAuth
+`client_name`; write the right local config for the agent you are connecting.
+
+| Client | Default auth | Local config |
+| --- | --- | --- |
+| Hermes | Bearer token | `$HERMES_HOME/config.yaml` |
+| Claude Code | OAuth | `.mcp.json` or Claude's user MCP config |
+| Codex | OAuth | `.codex/config.toml` or Codex's user MCP config |
+| VS Code / Cursor / Claude Desktop | OAuth when supported | Their remote MCP connector UI |
+
+For Hermes, do **not** add `auth: oauth` unless you specifically want Hermes'
+loopback OAuth flow. Use the bearer-token config below.
 
 ## Quick Connect
 
@@ -42,6 +57,40 @@ environment, Airgraph supports both current OAuth shapes:
 
 No token needs to be pasted for OAuth-capable clients.
 
+### Hermes
+
+Hermes currently works best with an Airgraph `agk_...` token. First create a
+token in the Airgraph web app:
+
+1. Open Airgraph.
+2. Go to **Settings -> 에이전트 연결 토큰**.
+3. Choose **Hermes** and create a token.
+4. Copy the `agk_...` value once.
+
+Then add Airgraph to your named Hermes profile:
+
+```yaml
+mcp_servers:
+  airgraph:
+    url: "https://whale-app-kfijw.ondigitalocean.app/mcp"
+    enabled: true
+    headers:
+      Authorization: "Bearer ${AIRGRAPH_TOKEN}"
+
+skills:
+  external_dirs:
+    - "airgraph-skills"
+```
+
+Start Hermes with the token in your environment:
+
+```bash
+export AIRGRAPH_TOKEN=agk_your_token
+```
+
+If you already see `auth: oauth` under `mcp_servers.airgraph`, remove it before
+using the bearer config.
+
 ### Other Remote MCP Clients
 
 Add a custom or remote MCP server with this URL:
@@ -60,9 +109,10 @@ https://whale-app-kfijw.ondigitalocean.app/mcp
 Airgraph scopes every MCP request to the signed-in user. Your agent only sees
 your Airgraph databases.
 
-### OAuth, Preferred
+### OAuth
 
-Airgraph exposes OAuth discovery metadata and supports:
+Airgraph exposes OAuth discovery metadata for clients such as Claude Code, Codex,
+VS Code, Cursor, and Claude Desktop. It supports:
 
 - **Authorization Code + PKCE** for clients that can open a browser and receive a
   callback.
@@ -72,9 +122,9 @@ Airgraph exposes OAuth discovery metadata and supports:
 Both flows mint user-scoped `ago_...` access tokens automatically. You usually do
 not see or copy those tokens.
 
-### Manual Token, Fallback
+### Manual Token
 
-Use this only for clients that do not support OAuth.
+Use this for Hermes, or for any client that does not support OAuth.
 
 1. Open the Airgraph web app.
 2. Go to **Settings -> 에이전트 연결 토큰**.
@@ -177,21 +227,7 @@ For the conventional root layout, that is usually:
 ~/.hermes/profiles/research/config.yaml
 ```
 
-OAuth config:
-
-```yaml
-mcp_servers:
-  airgraph:
-    url: "https://whale-app-kfijw.ondigitalocean.app/mcp"
-    enabled: true
-    auth: oauth
-
-skills:
-  external_dirs:
-    - "airgraph-skills"
-```
-
-Bearer fallback:
+Bearer token config:
 
 ```yaml
 mcp_servers:
@@ -208,6 +244,11 @@ skills:
 
 `skills.external_dirs` is required. If it is missing, Hermes will not sync or
 load Airgraph skills for that profile.
+
+If Hermes created a file like
+`$HERMES_HOME/mcp-tokens/airgraph.client.json`, that is an OAuth client
+registration from the older loopback flow. It is not needed for the bearer-token
+setup.
 
 ## Airgraph Skill Sync
 
@@ -267,7 +308,10 @@ node scripts/agent-setup.mjs --target claude-code \
 node scripts/agent-setup.mjs --target codex \
   --url https://whale-app-kfijw.ondigitalocean.app/mcp
 
-# Hermes named profile: config.yaml + airgraph-skills
+export AIRGRAPH_TOKEN=agk_...
+
+# Hermes named profile: config.yaml + airgraph-skills.
+# Hermes defaults to bearer token config.
 node scripts/agent-setup.mjs --target hermes --profile research \
   --url https://whale-app-kfijw.ondigitalocean.app/mcp
 ```
@@ -304,14 +348,18 @@ Restart or open a new agent session after changing MCP config or syncing skills.
 
 ## For An AI Agent Setting This Up
 
-1. Pick the target client: Claude Code, Codex, Hermes, or another remote MCP
+1. Pick the target client: Hermes, Claude Code, Codex, or another remote MCP
    client.
-2. Add the hosted MCP URL with the client-specific config above.
-3. Ask the human to complete OAuth. If the client shows a device code, send them
-   to the verification URL shown by the client; if a browser opens, ask them to
-   log in and click **Allow**.
-4. If OAuth is unavailable, ask the human for an `agk_...` manual token and store
-   it in `AIRGRAPH_TOKEN`, not directly in committed config.
+2. For Hermes, ask the human to create an `agk_...` token in Airgraph settings,
+   store it in `AIRGRAPH_TOKEN`, and write a bearer `Authorization` header. Do
+   not write `auth: oauth` for Hermes by default.
+3. For Claude Code, Codex, VS Code, Cursor, or Claude Desktop, add the hosted MCP
+   URL with the client-specific config above and complete OAuth when prompted.
+   If the client shows a device code, send the human to the verification URL
+   shown by the client; if a browser opens, ask them to log in and click
+   **Allow**.
+4. If OAuth is unavailable for any other client, use an `agk_...` manual token
+   and store it in `AIRGRAPH_TOKEN`, not directly in committed config.
 5. For ambient skills, sync only the Airgraph skills routed to the target's
    `그룹` label.
 
@@ -336,9 +384,9 @@ Tools appear as `mcp__airgraph__*` in compatible clients.
 - **Remote MCP** over Streamable HTTP - one hosted endpoint, any compatible
   client.
 - **OAuth 2.1 + PKCE** with Dynamic Client Registration and protected-resource
-  discovery.
+  discovery for OAuth-capable clients.
 - **Device-code OAuth** for agents that cannot receive a callback.
-- **Manual `agk_...` tokens** for clients without OAuth support.
+- **Manual `agk_...` tokens** for Hermes and clients without OAuth support.
 - **Per-user isolation** - tokens are hashed at rest and resolved to one
   Airgraph user before any tool call runs.
 - **Skill routing** - Airgraph skill nodes are selected by `그룹` and mirrored as
